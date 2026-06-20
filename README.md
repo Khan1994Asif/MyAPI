@@ -83,7 +83,9 @@ The backend strictly adheres to clean-coding conventions and decouple responsibi
 └── 📜 Program.cs           # Application bootstrap, CORS policies, & DI Registrations
 
 
-## Sql Script : 
+## Sql Script :
+
+```text
 USE [CandidateContactSync]
 GO
 
