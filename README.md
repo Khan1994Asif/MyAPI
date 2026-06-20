@@ -42,15 +42,14 @@ The core feature of this engine is a **Just-In-Time (JIT) Schema Drift Validatio
 ### 1. Just-In-Time (JIT) Schema Sync Safeguard
 To prevent integration pipelines from crashing with hard-to-debug `400 Bad Request` or unmapped structural payload errors, the system implements a runtime guardrail:
 * **Dynamic Inspection:** Right before executing a sync payload, the API requests live object metadata from Salesforce’s native REST API SObject Describe layout endpoint (`/services/data/v60.0/sobjects/Contact/describe`).
-* **Reflection-Driven Validation:** The backend uses C# Reflection to map the JSON schema payload arrays against local Entity Framework Core model definitions (`[StringLength]`, datatypes, and field mappings).
+* **Object Validation:** The backend map the JSON schema payload arrays against local Entity Framework Core model definitions (`[StringLength]`, datatypes, and field mappings).
 * **Drift Mitigation:** If a field size mismatch (e.g., field truncated in Salesforce) or a missing column dependency is discovered, the sync operation is cleanly blocked, the local record status is flagged with a mismatch exception, and a descriptive notification is bubbled up to the client application.
 
 ### 2. Architecture & Software Design Patterns
 The backend strictly adheres to clean-coding conventions and decouple responsibilities across structured boundaries:
-* **Repository Pattern:** Encapsulates raw database queries and mutations via Entity Framework Core inside a dedicated `Repositories/` layer, protecting the database context (`ApplicationDbContext`).
-* **Service Layer Pattern:** Houses business workflows and validation mechanisms inside a `Services/` tier. Controllers never execute business calculations or DB transactions directly.
-* **Abstract Factory Pattern:** Decouples API client footprints by separating the composition of raw `HttpRequestMessage` envelopes (headers, tokens, media types) from the integration services executing outbound calls.
-* **Data Transfer Objects (DTOs):** Implements dedicated input request and output response models to shield interior domain structural schemas from leaking across network perimeter zones.
+* **Repository Folder:** Encapsulates raw database queries and mutations via Entity Framework Core inside a dedicated `Repositories/` layer, protecting the database context (`ApplicationDbContext`).
+* **Service Layer Folder:** Houses business workflows and validation mechanisms inside a `Services/` tier. Controllers never execute business calculations or DB transactions directly.
+* **Req , Res and DTOs models):** Implements dedicated input request and output response models to shield interior domain structural schemas from leaking across network perimeter zones.
 * **Dependency Injection (DI):** Explicitly utilizes constructor dependency injection via the built-in .NET IoC container to manage service lifecycles seamlessly.
 
 ---
@@ -62,7 +61,6 @@ The backend strictly adheres to clean-coding conventions and decouple responsibi
 * **Database Engine:** Microsoft SQL Server
 * **External Integration:** Salesforce REST API (v60.0 SObject Describe & SObject Rows)
 * **Authentication:** OAuth 2.0 (Bearer Token Protocol)
-* **Testing & Prototyping:** Postman API client
 
 ---
 
@@ -83,3 +81,26 @@ The backend strictly adheres to clean-coding conventions and decouple responsibi
 │   └── ISalesforceRequestFactory.cs
 ├── ⚙️ appsettings.json     # Configuration file (Salesforce endpoints & DB Strings)
 └── 📜 Program.cs           # Application bootstrap, CORS policies, & DI Registrations
+
+
+## Sql Script : 
+USE [CandidateContactSync]
+GO
+
+CREATE TABLE [dbo].[EmpContactDetails](
+	[Id] [int] IDENTITY(1,1) NOT NULL,
+	[EmpAddress] [nvarchar](200) NOT NULL,
+	[EmpProfile] [nvarchar](100) NOT NULL,
+	[SynStatus] [nvarchar](500) NOT NULL,
+	[CreatedAt] [datetime2](7) NOT NULL,
+	[EmpFirstName] [nvarchar](100) NOT NULL,
+	[EmpLastName] [nvarchar](100) NOT NULL,
+ CONSTRAINT [PK_EmpContactDetails] PRIMARY KEY CLUSTERED 
+(
+	[Id] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
+) ON [PRIMARY]
+GO
+
+
+
