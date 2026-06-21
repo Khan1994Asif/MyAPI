@@ -33,6 +33,7 @@ namespace JP_Morgan_POC.Services
 
         public async Task<IEnumerable<EmpContactDetails>> GetAllContactsAsync()
         {
+            //var results = await _service.GetAccessTokenAsync();
             return await _contactRepository.GetAllAsync();
         }
 
@@ -133,7 +134,6 @@ namespace JP_Morgan_POC.Services
         {
             try
             {
-                //var results = await _service.GetAccessTokenAsync();
                 var createContact = new CreateContactDTO()
                 {
                     SQL_Id__c = contact.Id.ToString(),
