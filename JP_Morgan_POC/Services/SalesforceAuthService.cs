@@ -58,21 +58,14 @@ namespace JP_Morgan_POC.Services
             // Matches your Postman: POST {{url}}{{site}}/services/oauth2/token
             var tokenUrl = $"{_setting.LoginUrl}/services/oauth2/token";
 
-            //var formData = new Dictionary<string, string>
-            //{
-            //    { "grant_type",    "password"            },
-            //    { "client_id",     _setting.ClientId.Trim()      },
-            //    { "client_secret", _setting.ClientSecret.Trim()  },
-            //    { "username",      _setting.Username.Trim()      },
-            //    { "password",      (_setting.Password + _setting.SecurityToken).Trim() }
-            //};
-
             var formData = new Dictionary<string, string>
-            {
-                { "grant_type",    "client_credentials" },
-                { "client_id",     _setting.ClientId.Trim() },
-                { "client_secret", _setting.ClientSecret.Trim() }
-            };
+        {
+            { "grant_type",    "password"            },
+            { "client_id",     _setting.ClientId      },
+            { "client_secret", _setting.ClientSecret  },
+            { "username",      _setting.Username      },
+            { "password",      _setting.Password + _setting.SecurityToken }
+        };
 
             var request = new HttpRequestMessage(HttpMethod.Post, tokenUrl)
             {
