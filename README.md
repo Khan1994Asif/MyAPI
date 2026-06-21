@@ -1,3 +1,9 @@
+# SalesForce admin account and Contact object fields change details :
+I have created one developer account in salesforce which is admin by defulat.
+In users tab there is also another admin "epic.c36945b729ab@orgfarm.salesforce.com".
+I have enable login button in users tab by changing in the login access policy.
+Epic,Orgfarm admin can login as admin and can modify the Contact object fields and its size.
+
 # WebAPI For Sql to Contact Object data sync : 
 Created API project for inserting record using EF core in SQL and checking the Salesforce Object and by using REST API.
 Below API fetches contact object fields:
