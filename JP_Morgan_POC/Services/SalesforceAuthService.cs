@@ -1,4 +1,5 @@
 ﻿using JP_Morgan_POC.Model;
+using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Options;
 using System.Net.Http.Headers;
 using System.Text.Json;
@@ -7,70 +8,68 @@ namespace JP_Morgan_POC.Services
 {
     public class SalesforceAuthService
     {
+        private const string TokenCacheKey = "salesforce_token";
+        private static readonly TimeSpan TokenLifetime = TimeSpan.FromHours(2);
+
         private readonly HttpClient _httpClient;
-        private readonly SalesforceConfig _setting;
+        private readonly SalesforceSettings _settings;
+        private readonly IMemoryCache _memoryCache;
 
-        private string _accessToken;
-        private string _instanceUrl;
-        private DateTime _tokenExpiresAt = DateTime.MinValue;
-
-        // Salesforce access tokens typically last 2 hours
-        private static readonly TimeSpan TokenLifetime = TimeSpan.FromMinutes(110);
-
-        public SalesforceAuthService(HttpClient httpClient, IOptions<SalesforceConfig> options)
+        public SalesforceAuthService(
+            HttpClient httpClient,
+            IOptions<SalesforceSettings> options,
+            IMemoryCache memoryCache)
         {
             _httpClient = httpClient;
-            _setting = options.Value;
+            _settings = options.Value;
+            _memoryCache = memoryCache;
         }
 
-        /// <summary>
-        /// Returns a valid access token. Fetches a new one automatically if expired.
-        /// </summary>
         public async Task<string> GetAccessTokenAsync()
         {
-            if (!string.IsNullOrEmpty(_accessToken) && DateTime.UtcNow < _tokenExpiresAt)
-                return _accessToken;
+            if (_memoryCache.TryGetValue(TokenCacheKey, out SalesforceTokenCacheItem cachedToken))
+            {
+                return cachedToken.AccessToken;
+            }
 
-            await RefreshTokenAsync();
-            return _accessToken;
+            var token = await RefreshTokenAsync();
+            return token.AccessToken;
         }
 
-        /// <summary>
-        /// Returns the Salesforce instance URL (e.g. https://yourorg.my.salesforce.com)
-        /// </summary>
         public async Task<string> GetInstanceUrlAsync()
         {
-            await GetAccessTokenAsync(); // ensures token is fresh
-            return _instanceUrl;
+            if (_memoryCache.TryGetValue(TokenCacheKey, out SalesforceTokenCacheItem cachedToken))
+            {
+                return cachedToken.InstanceUrl;
+            }
+
+            var token = await RefreshTokenAsync();
+            return token.InstanceUrl;
         }
 
-        /// <summary>
-        /// Forces a new token fetch regardless of expiry — call this on 401 responses.
-        /// </summary>
-        public async Task ForceRefreshAsync()
+        public void RemoveTokenFromCache()
         {
-            _tokenExpiresAt = DateTime.MinValue;
-            await RefreshTokenAsync();
+            _memoryCache.Remove(TokenCacheKey);
         }
 
-        private async Task RefreshTokenAsync()
+        private async Task<SalesforceTokenCacheItem> RefreshTokenAsync()
         {
-            // Matches your Postman: POST {{url}}{{site}}/services/oauth2/token
-            var tokenUrl = $"{_setting.LoginUrl}/services/oauth2/token";
+            var tokenUrl = $"{_settings.LoginUrl}/services/oauth2/token";
 
             var formData = new Dictionary<string, string>
-        {
-            { "grant_type",    "password"            },
-            { "client_id",     _setting.ClientId      },
-            { "client_secret", _setting.ClientSecret  },
-            { "username",      _setting.Username      },
-            { "password",      _setting.Password + _setting.SecurityToken }
-        };
+            {
+                { "grant_type", "password" },
+                { "client_id", _settings.ClientId },
+                { "client_secret", _settings.ClientSecret },
+                { "username", _settings.Username },
+                { "password", _settings.Password + _settings.SecurityToken }
+            };
 
             var request = new HttpRequestMessage(HttpMethod.Post, tokenUrl)
             {
                 Content = new FormUrlEncodedContent(formData)
             };
+
             request.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
 
             var response = await _httpClient.SendAsync(request);
@@ -79,11 +78,29 @@ namespace JP_Morgan_POC.Services
             if (!response.IsSuccessStatusCode)
                 throw new Exception($"Salesforce auth failed [{response.StatusCode}]: {body}");
 
-            var result = JsonSerializer.Deserialize<SalesforceTokenResponse>(body);
+            var result = JsonSerializer.Deserialize<SalesforceTokenResponse>(body)
+                         ?? throw new Exception("Token response is invalid.");
 
-            _accessToken = result.AccessToken;
-            _instanceUrl = result.InstanceUrl;
-            _tokenExpiresAt = DateTime.UtcNow.Add(TokenLifetime);
+            var cacheItem = new SalesforceTokenCacheItem
+            {
+                AccessToken = result.AccessToken,
+                InstanceUrl = result.InstanceUrl
+            };
+
+            var cacheOptions = new MemoryCacheEntryOptions
+            {
+                AbsoluteExpirationRelativeToNow = TokenLifetime
+            };
+
+            _memoryCache.Set(TokenCacheKey, cacheItem, cacheOptions);
+
+            return cacheItem;
         }
+    }
+
+    public class SalesforceTokenCacheItem
+    {
+        public string AccessToken { get; set; } = string.Empty;
+        public string InstanceUrl { get; set; } = string.Empty;
     }
 }

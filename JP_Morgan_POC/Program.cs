@@ -15,6 +15,8 @@ builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 builder.Services.AddHttpClient();
+builder.Services.AddMemoryCache();
+
 
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
 options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
@@ -44,6 +46,16 @@ builder.Services.AddCors(option =>
         opt.AllowAnyHeader().AllowAnyMethod().WithOrigins("http://localhost:4200");
     });
 });
+
+builder.Services.AddHttpClient<SalesforceClient>();
+builder.Services.AddHttpClient<SalesforceMetadataService>();
+
+builder.Services.AddScoped<OutboxRepository>();
+builder.Services.AddScoped<SyncControlRepository>();
+builder.Services.AddScoped<SalesforceSchemaGuard>();
+builder.Services.AddScoped<SyncProcessor>();
+
+builder.Services.AddHostedService<SyncWorker>();
 
 
 

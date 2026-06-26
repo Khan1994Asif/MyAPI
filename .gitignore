@@ -361,3 +361,5 @@ MigrationBackup/
 
 # Fody - auto-generated XML schema
 FodyWeavers.xsd
+/JP_Morgan_POC/Controllers/WeatherForecastController.cs
+/JP_Morgan_POC/appsettings.json

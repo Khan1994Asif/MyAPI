@@ -29,6 +29,7 @@ namespace JP_Morgan_POC.Services
             _settings = options.Value;
             _httpClient = httpClient;
             _service = service;
+
         }
 
         public async Task<IEnumerable<EmpContactDetails>> GetAllContactsAsync()
@@ -43,23 +44,23 @@ namespace JP_Morgan_POC.Services
 
         public async Task<EmpContactDetails> CreateContactAsync(EmpContactDetails contact)
         {
-            var result = await GetContactsFieldsAndVerify();
-            if (result != null && result.Count > 0)
-            {
-                contact.SynStatus = string.Join(" | ", result);
-                await _contactRepository.AddAsync(contact);
-                await _contactRepository.SaveChangesAsync();
-            }
-            else
-            {
-                contact.SynStatus = "Pending";
-                await _contactRepository.AddAsync(contact);
-                await _contactRepository.SaveChangesAsync();
-
-                var data = await CreateContact(contact);
-            }
-
+            contact.SynStatus = "Pending";
+            await _contactRepository.AddAsync(contact);
+            await _contactRepository.SaveChangesAsync();
             return contact;
+
+            //_settings.AccessToken = await _service.GetAccessTokenAsync();
+            //var result = await GetContactsFieldsAndVerify();
+            //if (result != null && result.Count > 0)
+            //{
+            //    contact.SynStatus = string.Join(" | ", result);
+            //    await _contactRepository.AddAsync(contact);
+            //    await _contactRepository.SaveChangesAsync();
+            //}
+            //else
+            //{
+            //    var data = await CreateContact(contact);
+            //}
         }
         private async Task<List<string>> GetContactsFieldsAndVerify()
         {
